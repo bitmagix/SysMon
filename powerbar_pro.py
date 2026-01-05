@@ -159,14 +159,18 @@ class AppBarManager:
         # Query position (Windows may adjust)
         SHAppBarMessage(ABM_QUERYPOS, byref(self.abd))
         
-        # Adjust based on edge
+        # IMPORTANT: After query, recalculate based on what Windows gave us
         if self.edge == ABE_BOTTOM:
+            # Windows tells us the bottom edge we can use
             self.abd.rc.top = self.abd.rc.bottom - self.height
         elif self.edge == ABE_TOP:
+            # Windows tells us the top edge we can use  
             self.abd.rc.bottom = self.abd.rc.top + self.height
         
         # Set final position - This reserves the screen space!
         SHAppBarMessage(ABM_SETPOS, byref(self.abd))
+        
+        print(f"📍 AppBar position: x={self.abd.rc.left}, y={self.abd.rc.top}, w={self.abd.rc.right - self.abd.rc.left}, h={self.abd.rc.bottom - self.abd.rc.top}")
         
         return (self.abd.rc.left, self.abd.rc.top, 
                 self.abd.rc.right - self.abd.rc.left, 
@@ -800,26 +804,43 @@ class PowerBar(tk.Tk):
     def _apply_settings(self, new_config):
         old_fixed = self.config.get("fixed_mode", False)
         new_fixed = new_config.get("fixed_mode", False)
+        old_position = self.config.get("dock_position", "bottom")
+        new_position = new_config.get("dock_position", "bottom")
         
         self.config = new_config
         
-        # Recreate UI first
-        self.container.destroy()
-        self._setup_window()
-        self._create_ui()
+        # If position changed while in fixed mode, need to re-register AppBar
+        position_changed = old_position != new_position
         
-        # Handle fixed mode change AFTER window setup
-        if new_fixed and not old_fixed:
+        # Handle fixed mode / position changes
+        if new_fixed and position_changed and self.appbar:
+            # Position changed - must re-register AppBar
+            self._disable_fixed_mode()
+            self.container.destroy()
+            self._setup_window()
+            self._create_ui()
+            self.after(100, self._enable_fixed_mode)
+        elif new_fixed and not old_fixed:
+            # Turning on fixed mode
+            self.container.destroy()
+            self._setup_window()
+            self._create_ui()
             self.after(100, self._enable_fixed_mode)
         elif not new_fixed and old_fixed:
+            # Turning off fixed mode
             self._disable_fixed_mode()
-        elif new_fixed and self.appbar:
-            # Update AppBar position/height
-            edge = ABE_TOP if new_config.get("dock_position") == "top" else ABE_BOTTOM
-            self.appbar.set_edge(edge)
-            self.appbar.set_height(new_config.get("bar_height", 26))
-            pos = self.appbar.get_position()
-            self.geometry(f"{pos[2]}x{pos[3]}+{pos[0]}+{pos[1]}")
+            self.container.destroy()
+            self._setup_window()
+            self._create_ui()
+        else:
+            # Just regular settings change
+            self.container.destroy()
+            self._setup_window()
+            self._create_ui()
+            # If fixed mode active, reposition window
+            if new_fixed and self.appbar and self.appbar.registered:
+                pos = self.appbar.get_position()
+                self.geometry(f"{pos[2]}x{pos[3]}+{pos[0]}+{pos[1]}")
     
     def _show_menu(self, event):
         menu = tk.Menu(self, tearoff=0, bg="#2a2a2a", fg="white",

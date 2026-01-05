@@ -17,9 +17,9 @@ A sleek, transparent status bar that displays real-time CPU, RAM, GPU (NVIDIA), 
 
 ## 📸 Screenshot
 
-```
-◀ CPU: 5% | RAM: 14% (18/127GB) │ GPU: 0% │ VRAM: 2.9/32GB │ 39°C │ NET: ↓0 ↑0 KB/s │ DISK: R:0.0 W:0.0 MB/s ⚙ ✕
-```
+![SysMon PowerBar Pro](screenshot.png)
+
+*PowerBar showing CPU, RAM, GPU (RTX 5090), VRAM, Temperature, Network and Disk activity*
 
 ## 🚀 Quick Start
 
